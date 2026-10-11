@@ -58,26 +58,19 @@ Experienciadeaprendizaje3/
 │       ├── excepciones/            # BancoException, DatoInvalidoException, etc.
 │       ├── util/                   # Validador territorial, Formateador monetario/fechas
 │       └── vista/                  # VentanaPrincipal (JFrame, JTabbedPane, JTable, Dashboard)
-├── docs/
-│   ├── DOCUMENTO_TECNICO.md        # Documento técnico con diagramas UML y modelo relacional
-│   └── AUDITORIA_COHERENCIA.md     # Informe de auditoría continua y cumplimiento de rúbrica
-├── PLAN_DE_PRUEBAS.md              # Plan maestro de pruebas y matriz de casos de prueba
-└── README.md                       # Documentación principal de inicio rápido
+└── README.md                       # Documentación técnica de inicio rápido
 ```
 
 ---
 
-## 📋 Entregables de la Fase 1 Cubiertos
+## 📋 Entregables de la Fase 1 en el Repositorio
 
 | Entregable Solicitado | Ubicación / Estado |
 |---|---|
 | **Proyecto Java Desktop** | Paquetes en `src/banco/` con interfaz gráfica moderna Swing (`VentanaPrincipal`). |
-| **Gestión de Clientes (CRUD)** | Formulario y tabla interactiva con Código, DUI, Nombre, Teléfono, Correo, Dirección, Estado. |
+| **Gestión de Clientes (CRUD)** | Formulario y tabla interactiva con Código, DUI, Nombre, Teléfono, Correo, Dirección y Estado. |
 | **Cuentas Bancarias** | Apertura y vinculación de Cuentas de Ahorro y Corrientes con saldo y validaciones. |
 | **Script SQL** | `sql/01_esquema_banco.sql` con esquema relacional, restricciones y datos de prueba. |
 | **Base de datos MySQL** | Soportada en Docker (`docker-compose.yml`) y XAMPP (`3306`). |
-| **Plan de Pruebas** | `PLAN_DE_PRUEBAS.md` con 25+ casos de prueba detallados. |
-| **Documento Técnico** | `docs/DOCUMENTO_TECNICO.md` con arquitectura, diagramas UML y modelo ER. |
-| **Auditoría de Coherencia** | `docs/AUDITORIA_COHERENCIA.md` con evaluación de rúbrica (100% Excelente). |
-| **Diagrama de Clases** | Modelado en Mermaid en el documento técnico. |
-| **Modelo Relacional** | Diagrama entidad-relación en Mermaid en el documento técnico. |
+| **Driver JDBC** | `lib/mysql-connector-j-9.1.0.jar` incluido para ejecución inmediata. |
+| **Documentación de Cátedra** | Entregables documentales (Documento Técnico, Plan de Pruebas y Diagramas) gestionados para entrega de aula virtual. |
