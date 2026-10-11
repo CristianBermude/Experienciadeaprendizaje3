@@ -38,27 +38,6 @@ java -cp "bin:lib/mysql-connector-j-9.1.0.jar" banco.Main
 docker compose down
 ```
 
-*(En Windows use `;` como separador en lugar de `:`: `-cp "bin;lib\mysql-connector-j-9.1.0.jar"`)*
-
----
-
-### Opción B: Ejecución con XAMPP / MariaDB / MySQL Local
-
-Para los compañeros que utilizan **XAMPP**:
-
-1. Iniciar el servicio **MySQL** desde el Panel de Control de XAMPP (puerto habitual `3306`).
-2. Abrir **phpMyAdmin** (`http://localhost/phpmyadmin`) o MySQL Workbench.
-3. Importar o ejecutar el script ubicado en:
-   ```
-   sql/01_esquema_banco.sql
-   ```
-4. Compilar y ejecutar la aplicación:
-   ```bash
-   mkdir -p bin
-   javac -encoding UTF-8 -cp "lib/mysql-connector-j-9.1.0.jar" -d bin $(find src -name "*.java")
-   java -cp "bin:lib/mysql-connector-j-9.1.0.jar" banco.Main
-   ```
-   *El sistema detecta automáticamente si el servidor activo es Docker (`3308`) o XAMPP (`3306`) y se conecta en segundo plano sin intervención manual.*
 
 ---
 
