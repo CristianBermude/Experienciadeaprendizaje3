@@ -1,0 +1,20 @@
+# Compilados de Java
+*.class
+bin/
+
+# Documentos internos (no se publican en el repositorio)
+docs/
+PLAN_DE_PRUEBAS.md
+GUION_VIDEO.md
+
+# Sistema Operativo
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project

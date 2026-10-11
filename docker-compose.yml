@@ -1,0 +1,19 @@
+services:
+  banco-db:
+    image: mysql:8.0
+    container_name: banco_academico_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: banco_academico_db
+      MYSQL_USER: banco_user
+      MYSQL_PASSWORD: banco_pass
+    ports:
+      - "3308:3306"
+    volumes:
+      - banco_data:/var/lib/mysql
+      - ./sql/01_esquema_banco.sql:/docker-entrypoint-initdb.d/01_esquema_banco.sql:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_spanish_ci
+
+volumes:
+  banco_data:
