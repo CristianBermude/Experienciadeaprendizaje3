@@ -58,7 +58,7 @@ Para los compañeros que utilizan **XAMPP**:
    javac -encoding UTF-8 -cp "lib/mysql-connector-j-9.1.0.jar" -d bin $(find src -name "*.java")
    java -cp "bin:lib/mysql-connector-j-9.1.0.jar" banco.Main
    ```
-5. En la aplicación, vaya a la pestaña **"⚙️ Conexión BD"**, seleccione **"🐬 XAMPP / MySQL Local (Puerto 3306)"** y haga clic en **"🔌 Probar y Aplicar Conexión"**. ¡El sistema se conectará de inmediato sin modificar código!
+   *El sistema detecta automáticamente si el servidor activo es Docker (`3308`) o XAMPP (`3306`) y se conecta en segundo plano sin intervención manual.*
 
 ---
 

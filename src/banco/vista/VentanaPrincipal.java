@@ -15,7 +15,6 @@ import banco.util.Formateador;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -69,14 +68,6 @@ public class VentanaPrincipal extends JFrame {
     private JButton btnCtaCambiarEstado;
     private JButton btnCtaLimpiar;
 
-    // Componentes de Configuración BD
-    private JRadioButton rbDocker;
-    private JRadioButton rbXampp;
-    private JTextField txtDbHost;
-    private JTextField txtDbPuerto;
-    private JTextField txtDbUser;
-    private JPasswordField txtDbPass;
-    private JButton btnProbarConexion;
 
     public VentanaPrincipal() {
         this.servicio = new BancoServicio();
@@ -106,7 +97,6 @@ public class VentanaPrincipal extends JFrame {
         tabbedPane.addTab("📊 Resumen General", crearPanelDashboard());
         tabbedPane.addTab("👥 Gestión de Clientes", crearPanelClientes());
         tabbedPane.addTab("💳 Cuentas Bancarias", crearPanelCuentas());
-        tabbedPane.addTab("⚙️ Conexión BD (Docker / XAMPP)", crearPanelConfigBD());
 
         panelContenedor.add(tabbedPane, BorderLayout.CENTER);
 
@@ -456,98 +446,6 @@ public class VentanaPrincipal extends JFrame {
         return pnl;
     }
 
-    // =========================================================================
-    // PESTAÑA 4: CONFIGURACIÓN BD (Docker / XAMPP)
-    // =========================================================================
-
-    private JPanel crearPanelConfigBD() {
-        JPanel pnl = new JPanel(new BorderLayout(15, 15));
-        pnl.setBorder(new EmptyBorder(20, 25, 20, 25));
-
-        JPanel pnlCentral = new JPanel(new GridBagLayout());
-        pnlCentral.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createEtchedBorder(), "Conmutador de Base de Datos MySQL",
-                TitledBorder.LEFT, TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 14)));
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 12, 8, 12);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        rbDocker = new JRadioButton("🐳 Docker Compose (Puerto 3308 - Recomendado)", true);
-        rbXampp = new JRadioButton("🐬 XAMPP / MySQL Local (Puerto 3306)");
-        ButtonGroup bg = new ButtonGroup();
-        bg.add(rbDocker);
-        bg.add(rbXampp);
-
-        txtDbHost = new JTextField("localhost", 15);
-        txtDbPuerto = new JTextField("3308", 6);
-        txtDbUser = new JTextField("banco_user", 15);
-        txtDbPass = new JPasswordField("banco_pass", 15);
-        btnProbarConexion = new JButton("🔌 Probar y Aplicar Conexión");
-
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        pnlCentral.add(rbDocker, gbc);
-
-        gbc.gridy = 1;
-        pnlCentral.add(rbXampp, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.gridy = 2; gbc.gridx = 0; pnlCentral.add(new JLabel("Host:"), gbc);
-        gbc.gridx = 1; pnlCentral.add(txtDbHost, gbc);
-
-        gbc.gridy = 3; gbc.gridx = 0; pnlCentral.add(new JLabel("Puerto:"), gbc);
-        gbc.gridx = 1; pnlCentral.add(txtDbPuerto, gbc);
-
-        gbc.gridy = 4; gbc.gridx = 0; pnlCentral.add(new JLabel("Usuario:"), gbc);
-        gbc.gridx = 1; pnlCentral.add(txtDbUser, gbc);
-
-        gbc.gridy = 5; gbc.gridx = 0; pnlCentral.add(new JLabel("Contraseña:"), gbc);
-        gbc.gridx = 1; pnlCentral.add(txtDbPass, gbc);
-
-        gbc.gridy = 6; gbc.gridx = 0; gbc.gridwidth = 2;
-        pnlCentral.add(btnProbarConexion, gbc);
-
-        // Listeners para cambio de perfil
-        rbDocker.addActionListener(e -> {
-            txtDbPuerto.setText("3308");
-            txtDbUser.setText("banco_user");
-            txtDbPass.setText("banco_pass");
-            ConexionBD.setPerfil(ConexionBD.Perfil.DOCKER);
-        });
-
-        rbXampp.addActionListener(e -> {
-            txtDbPuerto.setText("3306");
-            txtDbUser.setText("root");
-            txtDbPass.setText("");
-            ConexionBD.setPerfil(ConexionBD.Perfil.XAMPP_LOCAL);
-        });
-
-        btnProbarConexion.addActionListener(e -> {
-            try {
-                int puerto = Integer.parseInt(txtDbPuerto.getText().trim());
-                ConexionBD.configurarManual(txtDbHost.getText().trim(), puerto,
-                        txtDbUser.getText().trim(), new String(txtDbPass.getPassword()));
-                if (ConexionBD.probarConexion()) {
-                    JOptionPane.showMessageDialog(this,
-                            "¡Conexión establecida con éxito!\nURL: " + ConexionBD.getUrlConexion(),
-                            "Conexión Exitosa", JOptionPane.INFORMATION_MESSAGE);
-                    actualizarEstadoConexion();
-                    cargarDatosIniciales();
-                } else {
-                    JOptionPane.showMessageDialog(this,
-                            "No se pudo conectar a la base de datos con los parámetros indicados.",
-                            "Error de Conexión", JOptionPane.ERROR_MESSAGE);
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Error al aplicar configuración: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        pnl.add(pnlCentral, BorderLayout.CENTER);
-        return pnl;
-    }
 
     // =========================================================================
     // LÓGICA DE CONTROL Y EVENTOS: CLIENTES
