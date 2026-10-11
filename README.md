@@ -19,7 +19,6 @@ El proyecto de cátedra se compone de tres fases evolutivas:
 
 La aplicación cuenta con **soporte dual e inmediato** tanto para **Docker Compose** como para **XAMPP / MySQL Local**.
 
-### Opción A: Ejecución con Docker (Recomendada)
 
 El contenedor corre en un puerto aislado (**3308**) para no colisionar con otros servicios:
 
