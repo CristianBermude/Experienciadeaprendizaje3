@@ -66,6 +66,7 @@ public class VentanaPrincipal extends JFrame {
     private DefaultTableModel modeloTablaCuentas;
     private JButton btnCtaAperturar;
     private JButton btnCtaCambiarEstado;
+    private JButton btnGenerarNum;
     private JButton btnCtaLimpiar;
 
 
@@ -396,7 +397,7 @@ public class VentanaPrincipal extends JFrame {
         JPanel pnlBotones = new JPanel(new GridLayout(2, 2, 6, 6));
         btnCtaAperturar = new JButton("✨ Aperturar Cuenta");
         btnCtaCambiarEstado = new JButton("🔄 Cambiar Estado");
-        JButton btnGenerarNum = new JButton("🎲 Generar N°");
+        btnGenerarNum = new JButton("🎲 Generar N°");
         btnCtaLimpiar = new JButton("🧹 Limpiar");
 
         btnCtaCambiarEstado.setEnabled(false);
@@ -795,6 +796,7 @@ public class VentanaPrincipal extends JFrame {
             cmbCtaEstado.setEnabled(true); // El estado sí es administrable (Activar/Bloquear)
 
             btnCtaAperturar.setEnabled(false);
+            btnGenerarNum.setEnabled(false);
             btnCtaCambiarEstado.setEnabled(true);
         }
     }
@@ -820,6 +822,7 @@ public class VentanaPrincipal extends JFrame {
 
         tblCuentas.clearSelection();
         btnCtaAperturar.setEnabled(true);
+        btnGenerarNum.setEnabled(true);
         btnCtaCambiarEstado.setEnabled(false);
     }
 
