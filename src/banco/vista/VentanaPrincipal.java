@@ -742,14 +742,47 @@ public class VentanaPrincipal extends JFrame {
         if (fila >= 0) {
             txtCtaId.setText(modeloTablaCuentas.getValueAt(fila, 0).toString());
             txtCtaNumero.setText(modeloTablaCuentas.getValueAt(fila, 1).toString());
-            
-            // Cargar tipo de cuenta
+            txtCtaNumero.setEditable(false);
+
+            // Cargar y seleccionar el titular de la cuenta
+            String titularVisual = modeloTablaCuentas.getValueAt(fila, 3).toString();
+            boolean encontrado = false;
+            for (int i = 0; i < cmbCtaCliente.getItemCount(); i++) {
+                ClienteItemCombo item = cmbCtaCliente.getItemAt(i);
+                if (titularVisual.contains(item.getCliente().getCodigoCliente()) ||
+                    titularVisual.contains(item.getCliente().getNombreCompleto())) {
+                    cmbCtaCliente.setSelectedIndex(i);
+                    encontrado = true;
+                    break;
+                }
+            }
+            if (!encontrado) {
+                // Si el titular está inactivo o bloqueado y no estaba en el combo de nuevos
+                try {
+                    int idCuenta = Integer.parseInt(txtCtaId.getText().trim());
+                    Cuenta c = servicio.listarCuentas().stream()
+                            .filter(cta -> cta.getIdCuenta() == idCuenta)
+                            .findFirst().orElse(null);
+                    if (c != null && c.getCliente() != null) {
+                        ClienteItemCombo itemTemp = new ClienteItemCombo(c.getCliente());
+                        cmbCtaCliente.addItem(itemTemp);
+                        cmbCtaCliente.setSelectedItem(itemTemp);
+                    }
+                } catch (Exception ignored) {}
+            }
+            // Bloquear edición del cliente titular (no se puede transferir titularidad por formulario simple)
+            cmbCtaCliente.setEnabled(false);
+            cmbCtaCliente.setToolTipText("El cliente titular no se puede modificar una vez creada la cuenta.");
+
+            // Cargar tipo de cuenta y bloquear
             String tipoVisual = modeloTablaCuentas.getValueAt(fila, 2).toString();
             if (tipoVisual.contains("Ahorro")) {
                 cmbCtaTipo.setSelectedItem(TipoCuenta.AHORRO);
             } else {
                 cmbCtaTipo.setSelectedItem(TipoCuenta.CORRIENTE);
             }
+            cmbCtaTipo.setEnabled(false);
+            cmbCtaTipo.setToolTipText("El tipo de cuenta no se puede alterar.");
 
             // Cargar saldo actual y proteger contra edición manual
             String saldoActual = modeloTablaCuentas.getValueAt(fila, 4).toString();
@@ -759,6 +792,7 @@ public class VentanaPrincipal extends JFrame {
 
             EstadoCuenta est = (EstadoCuenta) modeloTablaCuentas.getValueAt(fila, 6);
             cmbCtaEstado.setSelectedItem(est);
+            cmbCtaEstado.setEnabled(true); // El estado sí es administrable (Activar/Bloquear)
 
             btnCtaAperturar.setEnabled(false);
             btnCtaCambiarEstado.setEnabled(true);
@@ -768,10 +802,20 @@ public class VentanaPrincipal extends JFrame {
     private void limpiarFormularioCuenta() {
         txtCtaId.setText("");
         txtCtaNumero.setText("");
+        txtCtaNumero.setEditable(true);
+
+        cargarComboClientes(); // Restablecer solo clientes activos
+        cmbCtaCliente.setEnabled(true);
+        cmbCtaCliente.setToolTipText("Seleccione el cliente titular de la cuenta");
+
+        cmbCtaTipo.setEnabled(true);
+        cmbCtaTipo.setSelectedItem(TipoCuenta.AHORRO);
+
         txtCtaSaldo.setText("0.00");
         txtCtaSaldo.setEditable(true);
         txtCtaSaldo.setToolTipText("Monto con el que se abre la cuenta bancaria");
-        cmbCtaTipo.setSelectedItem(TipoCuenta.AHORRO);
+
+        cmbCtaEstado.setEnabled(true);
         cmbCtaEstado.setSelectedItem(EstadoCuenta.ACTIVA);
 
         tblCuentas.clearSelection();
