@@ -462,10 +462,10 @@ public class VentanaPrincipal extends JFrame {
     private void actualizarEstadoConexion() {
         boolean ok = ConexionBD.probarConexion();
         if (ok) {
-            lblEstadoBD.setText("● Conectado a BD: " + ConexionBD.getPerfilActivo().getNombre() + " (" + ConexionBD.getUrlConexion() + ")");
+            lblEstadoBD.setText("● Conectado a BD: " + ConexionBD.getPerfilActivo().getNombre() + " (Puerto " + ConexionBD.getPerfilActivo().getPuerto() + ")");
             lblEstadoBD.setForeground(new Color(25, 135, 84));
         } else {
-            lblEstadoBD.setText("○ Desconectado de BD (" + ConexionBD.getUrlConexion() + ")");
+            lblEstadoBD.setText("○ Desconectado de BD");
             lblEstadoBD.setForeground(new Color(220, 53, 69));
         }
     }
@@ -742,6 +742,21 @@ public class VentanaPrincipal extends JFrame {
         if (fila >= 0) {
             txtCtaId.setText(modeloTablaCuentas.getValueAt(fila, 0).toString());
             txtCtaNumero.setText(modeloTablaCuentas.getValueAt(fila, 1).toString());
+            
+            // Cargar tipo de cuenta
+            String tipoVisual = modeloTablaCuentas.getValueAt(fila, 2).toString();
+            if (tipoVisual.contains("Ahorro")) {
+                cmbCtaTipo.setSelectedItem(TipoCuenta.AHORRO);
+            } else {
+                cmbCtaTipo.setSelectedItem(TipoCuenta.CORRIENTE);
+            }
+
+            // Cargar saldo actual y proteger contra edición manual
+            String saldoActual = modeloTablaCuentas.getValueAt(fila, 4).toString();
+            txtCtaSaldo.setText(saldoActual.replace("$", "").replace(",", "").trim());
+            txtCtaSaldo.setEditable(false);
+            txtCtaSaldo.setToolTipText("El saldo actual no se puede modificar manualmente. Solo cambia mediante transacciones bancarias.");
+
             EstadoCuenta est = (EstadoCuenta) modeloTablaCuentas.getValueAt(fila, 6);
             cmbCtaEstado.setSelectedItem(est);
 
@@ -754,6 +769,8 @@ public class VentanaPrincipal extends JFrame {
         txtCtaId.setText("");
         txtCtaNumero.setText("");
         txtCtaSaldo.setText("0.00");
+        txtCtaSaldo.setEditable(true);
+        txtCtaSaldo.setToolTipText("Monto con el que se abre la cuenta bancaria");
         cmbCtaTipo.setSelectedItem(TipoCuenta.AHORRO);
         cmbCtaEstado.setSelectedItem(EstadoCuenta.ACTIVA);
 
