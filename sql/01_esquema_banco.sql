@@ -4,6 +4,10 @@
 -- Base de Datos: MySQL 8.0 / MariaDB (Compatible con Docker y XAMPP)
 -- ============================================================================
 
+-- Fuerza UTF-8 en la sesión que ejecuta el script. Sin esto, el cliente mysql del contenedor Docker
+-- usa latin1 y los datos con tilde (María, Lucía, Martínez...) se guardan doblemente codificados.
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS banco_academico_db
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_spanish_ci;
