@@ -10,6 +10,8 @@ import banco.modelo.EstadoCliente;
 import banco.modelo.EstadoCuenta;
 import banco.modelo.TipoCuenta;
 import banco.modelo.Transaccion;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import banco.servicio.BancoServicio;
 import banco.util.Formateador;
 import banco.util.Validador;
@@ -37,6 +39,8 @@ import java.util.Map;
  * - Fase 2: Operaciones y Transacciones ACID, Reportes y Bitácora Log4J.
  */
 public class VentanaPrincipal extends JFrame {
+
+    private static final Logger logger = LogManager.getLogger(VentanaPrincipal.class);
 
     private final BancoServicio servicio;
 
@@ -860,7 +864,9 @@ public class VentanaPrincipal extends JFrame {
                     cmbCtaCliente.addItem(new ClienteItemCombo(c));
                 }
             }
-        } catch (BancoException ignored) {}
+        } catch (BancoException e) {
+            logger.warn("No se pudo cargar la lista de clientes activos en el combo de cuentas: {}", e.getMessage());
+        }
     }
 
     private void guardarCliente() {
@@ -1132,7 +1138,9 @@ public class VentanaPrincipal extends JFrame {
                         cmbCtaCliente.addItem(itemTemp);
                         cmbCtaCliente.setSelectedItem(itemTemp);
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    logger.warn("No se pudo preseleccionar el titular de la cuenta ID='{}': {}", txtCtaId.getText(), e.getMessage());
+                }
             }
             cmbCtaCliente.setEnabled(false);
             cmbCtaCliente.setToolTipText("El cliente titular no se puede modificar una vez creada la cuenta.");
@@ -1211,7 +1219,9 @@ public class VentanaPrincipal extends JFrame {
                     cmbTxCuentaDestino.addItem(new CuentaItemCombo(c));
                 }
             }
-        } catch (BancoException ignored) {}
+        } catch (BancoException e) {
+            logger.warn("No se pudieron cargar las cuentas en los combos de transacciones/reportes: {}", e.getMessage());
+        }
 
         // Seleccionar una cuenta de destino distinta a la de origen por comodidad si es posible
         if (cmbTxCuentaDestino.getItemCount() > 1) {
@@ -1516,7 +1526,9 @@ public class VentanaPrincipal extends JFrame {
             lblRepSaldoCustodia.setText(Formateador.aMoneda(saldoCustodia));
             lblRepTotalTx.setText(String.valueOf(totalTx));
 
-        } catch (BancoException ignored) {}
+        } catch (BancoException e) {
+            logger.error("No se pudieron calcular los totales contables del reporte: {}", e.getMessage(), e);
+        }
     }
 
     private void generarReporteSeleccionado() {
@@ -1747,7 +1759,9 @@ public class VentanaPrincipal extends JFrame {
             lblDashTotalRetirado.setText(Formateador.aMoneda((double) stats.get("totalRetirado")));
             lblDashTotalTransferido.setText(Formateador.aMoneda((double) stats.get("totalTransferido")));
             lblDashTotalTx.setText(stats.get("totalTransacciones").toString());
-        } catch (BancoException ignored) {}
+        } catch (BancoException e) {
+            logger.error("No se pudieron cargar las métricas del dashboard: {}", e.getMessage(), e);
+        }
     }
 
     private void mostrarError(String titulo, String mensaje) {

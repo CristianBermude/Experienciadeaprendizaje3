@@ -17,6 +17,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Data Access Object (DAO) para transacciones financieras.
@@ -25,11 +27,51 @@ import java.util.List;
  */
 public class TransaccionDAO {
 
-    private final SimpleDateFormat formatoCodigoFecha = new SimpleDateFormat("yyyyMMddHHmmss");
+    private static final Logger logger = LogManager.getLogger(TransaccionDAO.class);
+
+    private final SimpleDateFormat formatoCodigoFecha = new SimpleDateFormat("yyyyMMddHHmmssSSS");
+
+    /**
+     * Revierte la transacción en curso. Si el propio rollback falla, el error se registra
+     * en la bitácora (nivel ERROR) en lugar de ignorarse en silencio.
+     */
+    private static void revertir(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        try {
+            conn.rollback();
+            logger.warn("ROLLBACK ejecutado: la operación fue revertida y ningún saldo fue modificado.");
+        } catch (SQLException e) {
+            logger.error("FALLO al ejecutar ROLLBACK; el estado de la transacción es incierto: {}", e.getMessage(), e);
+        }
+    }
+
+    /** Restaura el modo autocommit antes de devolver la conexión, registrando cualquier fallo. */
+    private static void restaurarAutoCommit(Connection conn) {
+        if (conn == null) {
+            return;
+        }
+        try {
+            conn.setAutoCommit(true);
+        } catch (SQLException e) {
+            logger.error("No se pudo restaurar autocommit en la conexión: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Contador compartido (por JVM) para el sufijo del código de transacción. Antes se usaba un número
+     * aleatorio de 3 cifras: con varias operaciones en el mismo segundo la probabilidad de repetir el
+     * código era alta y la restricción UNIQUE de la BD rechazaba la transacción. Ahora el código combina
+     * marca de tiempo con milisegundos + contador incremental de 3 cifras, por lo que es único dentro de la
+     * misma ejecución y prácticamente imposible de repetir entre ejecuciones distintas.
+     */
+    private static final java.util.concurrent.atomic.AtomicInteger secuenciaCodigo =
+            new java.util.concurrent.atomic.AtomicInteger((int) (Math.random() * 1000));
 
     private synchronized String generarCodigo(String prefijo) {
-        int aleatorio = (int) (Math.random() * 900) + 100;
-        return "TX-" + prefijo + "-" + formatoCodigoFecha.format(new Date()) + "-" + aleatorio;
+        int secuencia = Math.floorMod(secuenciaCodigo.getAndIncrement(), 1000);
+        return "TX-" + prefijo + "-" + formatoCodigoFecha.format(new Date()) + "-" + String.format("%03d", secuencia);
     }
 
     /**
@@ -110,19 +152,13 @@ public class TransaccionDAO {
             return tx;
 
         } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
+            revertir(conn);
             throw new BancoException("Error en base de datos al realizar depósito: " + e.getMessage(), e);
         } catch (BancoException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
+            revertir(conn);
             throw e;
         } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
-            }
+            restaurarAutoCommit(conn);
             ConexionBD.cerrar(rsCuenta);
             ConexionBD.cerrar(stmtCuenta);
             ConexionBD.cerrar(stmtUpdate);
@@ -214,19 +250,13 @@ public class TransaccionDAO {
             return tx;
 
         } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
+            revertir(conn);
             throw new BancoException("Error en base de datos al realizar retiro: " + e.getMessage(), e);
         } catch (BancoException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
+            revertir(conn);
             throw e;
         } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
-            }
+            restaurarAutoCommit(conn);
             ConexionBD.cerrar(rsCuenta);
             ConexionBD.cerrar(stmtCuenta);
             ConexionBD.cerrar(stmtUpdate);
@@ -250,31 +280,50 @@ public class TransaccionDAO {
 
         Connection conn = null;
         PreparedStatement stmtOrigen = null;
-        PreparedStatement stmtDestino = null;
         PreparedStatement stmtUpdOrigen = null;
         PreparedStatement stmtUpdDestino = null;
         PreparedStatement stmtTx = null;
         ResultSet rsOrigen = null;
-        ResultSet rsDestino = null;
         ResultSet rsTx = null;
 
         try {
             conn = ConexionBD.obtenerConexion();
             conn.setAutoCommit(false); // Iniciar transacción ACID
 
-            // 1. Validar y bloquear cuenta de origen
-            String sqlOrigen = "SELECT id_cuenta, numero_cuenta, saldo, estado FROM cuentas WHERE id_cuenta = ? FOR UPDATE";
-            stmtOrigen = conn.prepareStatement(sqlOrigen);
+            // 1. Bloquear AMBAS cuentas en una sola sentencia y en orden ascendente de ID.
+            //    Un orden de bloqueo fijo evita el deadlock entre transferencias cruzadas
+            //    (A→B y B→A simultáneas), que antes bloqueaban origen y luego destino.
+            String sqlBloqueo = "SELECT id_cuenta, numero_cuenta, saldo, estado FROM cuentas " +
+                                "WHERE id_cuenta IN (?, ?) ORDER BY id_cuenta ASC FOR UPDATE";
+            stmtOrigen = conn.prepareStatement(sqlBloqueo);
             stmtOrigen.setInt(1, idCuentaOrigen);
+            stmtOrigen.setInt(2, idCuentaDestino);
             rsOrigen = stmtOrigen.executeQuery();
 
-            if (!rsOrigen.next()) {
-                throw new CuentaNoDisponibleException("La cuenta de origen con ID " + idCuentaOrigen + " no existe.");
+            String numOrigen = null;
+            double saldoOrigen = 0;
+            EstadoCuenta estOrigen = null;
+            String numDestino = null;
+            double saldoDestino = 0;
+            EstadoCuenta estDestino = null;
+
+            while (rsOrigen.next()) {
+                int idFila = rsOrigen.getInt("id_cuenta");
+                if (idFila == idCuentaOrigen) {
+                    numOrigen = rsOrigen.getString("numero_cuenta");
+                    saldoOrigen = rsOrigen.getDouble("saldo");
+                    estOrigen = EstadoCuenta.desdeString(rsOrigen.getString("estado"));
+                } else if (idFila == idCuentaDestino) {
+                    numDestino = rsOrigen.getString("numero_cuenta");
+                    saldoDestino = rsOrigen.getDouble("saldo");
+                    estDestino = EstadoCuenta.desdeString(rsOrigen.getString("estado"));
+                }
             }
 
-            String numOrigen = rsOrigen.getString("numero_cuenta");
-            double saldoOrigen = rsOrigen.getDouble("saldo");
-            EstadoCuenta estOrigen = EstadoCuenta.desdeString(rsOrigen.getString("estado"));
+            // 2. Validaciones de negocio (mismo orden de precedencia de errores que antes)
+            if (estOrigen == null) {
+                throw new CuentaNoDisponibleException("La cuenta de origen con ID " + idCuentaOrigen + " no existe.");
+            }
 
             if (estOrigen != EstadoCuenta.ACTIVA) {
                 throw new CuentaBloqueadaException("La cuenta de origen " + numOrigen + " está en estado " +
@@ -285,19 +334,9 @@ public class TransaccionDAO {
                 throw new FondosInsuficientesException(saldoOrigen, monto);
             }
 
-            // 2. Validar y bloquear cuenta de destino
-            String sqlDestino = "SELECT id_cuenta, numero_cuenta, saldo, estado FROM cuentas WHERE id_cuenta = ? FOR UPDATE";
-            stmtDestino = conn.prepareStatement(sqlDestino);
-            stmtDestino.setInt(1, idCuentaDestino);
-            rsDestino = stmtDestino.executeQuery();
-
-            if (!rsDestino.next()) {
+            if (estDestino == null) {
                 throw new CuentaNoDisponibleException("La cuenta de destino con ID " + idCuentaDestino + " no existe.");
             }
-
-            String numDestino = rsDestino.getString("numero_cuenta");
-            double saldoDestino = rsDestino.getDouble("saldo");
-            EstadoCuenta estDestino = EstadoCuenta.desdeString(rsDestino.getString("estado"));
 
             if (estDestino != EstadoCuenta.ACTIVA) {
                 throw new CuentaBloqueadaException("La cuenta de destino " + numDestino + " está en estado " +
@@ -355,23 +394,15 @@ public class TransaccionDAO {
             return tx;
 
         } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
+            revertir(conn);
             throw new BancoException("Error en base de datos al procesar transferencia: " + e.getMessage(), e);
         } catch (BancoException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ignored) {}
-            }
+            revertir(conn);
             throw e;
         } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
-            }
+            restaurarAutoCommit(conn);
             ConexionBD.cerrar(rsOrigen);
             ConexionBD.cerrar(stmtOrigen);
-            ConexionBD.cerrar(rsDestino);
-            ConexionBD.cerrar(stmtDestino);
             ConexionBD.cerrar(stmtUpdOrigen);
             ConexionBD.cerrar(stmtUpdDestino);
             ConexionBD.cerrar(rsTx);

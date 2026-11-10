@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.logging.log4j.LogManager;
 
 /**
  * Data Access Object (DAO) para la entidad Cuenta Bancaria y sus subclases polimórficas.
@@ -241,7 +242,10 @@ public class CuentaDAO {
         // Vincular cliente para navegación de objetos
         try {
             cuenta.setCliente(clienteDAO.buscarPorId(idCli));
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            LogManager.getLogger(CuentaDAO.class).warn(
+                    "No se pudo vincular el cliente (id={}) a la cuenta {}: {}", idCli, cuenta.getNumeroCuenta(), e.getMessage());
+        }
 
         return cuenta;
     }

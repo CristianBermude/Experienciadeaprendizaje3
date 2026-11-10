@@ -6,6 +6,8 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Gestor de conexión JDBC con soporte transparente para:
@@ -42,6 +44,8 @@ public class ConexionBD {
         public String getPassword() { return password; }
     }
 
+    private static final Logger logger = LogManager.getLogger(ConexionBD.class);
+
     private static Perfil perfilActivo = Perfil.DOCKER;
     private static String hostPersonalizado = null;
     private static Integer puertoPersonalizado = null;
@@ -52,7 +56,7 @@ public class ConexionBD {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
         } catch (ClassNotFoundException e) {
-            System.err.println("ADVERTENCIA: Driver MySQL JDBC no encontrado en classpath: " + e.getMessage());
+            logger.error("Driver MySQL JDBC no encontrado en classpath: {}", e.getMessage(), e);
         }
     }
 
@@ -97,6 +101,8 @@ public class ConexionBD {
         try {
             return DriverManager.getConnection(getUrlConexion(), getUsuarioActual(), getPasswordActual());
         } catch (SQLException exOriginal) {
+            logger.warn("Conexión fallida con perfil '{}' ({}): {}", perfilActivo.getNombre(), getUrlConexion(),
+                    exOriginal.getMessage());
             // Si el perfil activo es Docker y falló, intentar fallback a XAMPP (o viceversa) si no hay config manual
             if (hostPersonalizado == null && puertoPersonalizado == null) {
                 Perfil alternativo = (perfilActivo == Perfil.DOCKER) ? Perfil.XAMPP_LOCAL : Perfil.DOCKER;
@@ -104,8 +110,11 @@ public class ConexionBD {
                     String urlAlt = "jdbc:mysql://" + alternativo.getHost() + ":" + alternativo.getPuerto() + "/" + alternativo.getBaseDatos() + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8";
                     Connection cAlt = DriverManager.getConnection(urlAlt, alternativo.getUsuario(), alternativo.getPassword());
                     perfilActivo = alternativo; // Auto-conmutación exitosa
+                    logger.info("Auto-conmutación de base de datos exitosa: ahora se usa '{}' (puerto {}).",
+                            alternativo.getNombre(), alternativo.getPuerto());
                     return cAlt;
                 } catch (SQLException exFallback) {
+                    logger.error("Fallback a '{}' también falló: {}", alternativo.getNombre(), exFallback.getMessage());
                     // Si ambos fallaron, lanzamos el error original con sugerencia
                     throw new BancoException("No se pudo conectar a la base de datos MySQL en " + perfilActivo.getNombre() + " (" + getUrlConexion() + ") ni en " + alternativo.getNombre() + ".\nVerifique que Docker o XAMPP esté iniciado y que el script '01_esquema_banco.sql' haya sido importado.\nDetalle del error: " + exOriginal.getMessage(), exOriginal);
                 }
@@ -124,19 +133,19 @@ public class ConexionBD {
 
     public static void cerrar(Connection conn) {
         if (conn != null) {
-            try { conn.close(); } catch (SQLException ignored) {}
+            try { conn.close(); } catch (SQLException e) { logger.warn("No se pudo cerrar la conexión JDBC: {}", e.getMessage()); }
         }
     }
 
     public static void cerrar(Statement stmt) {
         if (stmt != null) {
-            try { stmt.close(); } catch (SQLException ignored) {}
+            try { stmt.close(); } catch (SQLException e) { logger.warn("No se pudo cerrar el Statement: {}", e.getMessage()); }
         }
     }
 
     public static void cerrar(ResultSet rs) {
         if (rs != null) {
-            try { rs.close(); } catch (SQLException ignored) {}
+            try { rs.close(); } catch (SQLException e) { logger.warn("No se pudo cerrar el ResultSet: {}", e.getMessage()); }
         }
     }
 
