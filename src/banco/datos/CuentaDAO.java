@@ -177,6 +177,28 @@ public class CuentaDAO {
         }
     }
 
+    public List<Cuenta> listarPorEstado(EstadoCuenta estado) throws BancoException {
+        String sql = "SELECT * FROM cuentas WHERE estado = ? ORDER BY id_cuenta DESC";
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<Cuenta> lista = new ArrayList<>();
+        try {
+            conn = ConexionBD.obtenerConexion();
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, estado.name());
+            rs = stmt.executeQuery();
+            while (rs.next()) {
+                lista.add(mapearCuenta(rs));
+            }
+            return lista;
+        } catch (SQLException e) {
+            throw new BancoException("Error al listar cuentas por estado " + estado + ": " + e.getMessage(), e);
+        } finally {
+            ConexionBD.cerrar(conn, stmt, rs);
+        }
+    }
+
     public double obtenerTotalSaldosGlobal() throws BancoException {
         String sql = "SELECT COALESCE(SUM(saldo), 0) FROM cuentas";
         Connection conn = null;
