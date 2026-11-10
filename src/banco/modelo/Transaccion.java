@@ -3,10 +3,37 @@ package banco.modelo;
 import java.io.Serializable;
 import java.sql.Timestamp;
 
+/**
+ * Entidad que modela una Transacción Bancaria (Depósito, Retiro o Transferencia).
+ * Compatible con la especificación JavaBean para persistencia y presentación.
+ */
 public class Transaccion implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    public enum Tipo { DEPOSITO, RETIRO, TRANSFERENCIA }
+    public enum Tipo {
+        DEPOSITO("Depósito"),
+        RETIRO("Retiro"),
+        TRANSFERENCIA("Transferencia");
+
+        private final String nombreVisual;
+
+        Tipo(String nombreVisual) {
+            this.nombreVisual = nombreVisual;
+        }
+
+        public String getNombreVisual() {
+            return nombreVisual;
+        }
+
+        public static Tipo desdeString(String valor) {
+            if (valor == null) return DEPOSITO;
+            try {
+                return Tipo.valueOf(valor.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return DEPOSITO;
+            }
+        }
+    }
 
     private int idTransaccion;
     private String codigoTransaccion;
@@ -17,6 +44,12 @@ public class Transaccion implements Serializable {
     private double saldoResultante;
     private String descripcion;
     private Timestamp fechaHora;
+
+    // Atributos de navegación / presentación para vistas y reportes
+    private String numeroCuentaOrigen;
+    private String numeroCuentaDestino;
+    private String titularOrigen;
+    private String titularDestino;
 
     public Transaccion() {}
 
@@ -60,4 +93,22 @@ public class Transaccion implements Serializable {
 
     public Timestamp getFechaHora() { return fechaHora; }
     public void setFechaHora(Timestamp fechaHora) { this.fechaHora = fechaHora; }
+
+    public String getNumeroCuentaOrigen() { return numeroCuentaOrigen; }
+    public void setNumeroCuentaOrigen(String numeroCuentaOrigen) { this.numeroCuentaOrigen = numeroCuentaOrigen; }
+
+    public String getNumeroCuentaDestino() { return numeroCuentaDestino; }
+    public void setNumeroCuentaDestino(String numeroCuentaDestino) { this.numeroCuentaDestino = numeroCuentaDestino; }
+
+    public String getTitularOrigen() { return titularOrigen; }
+    public void setTitularOrigen(String titularOrigen) { this.titularOrigen = titularOrigen; }
+
+    public String getTitularDestino() { return titularDestino; }
+    public void setTitularDestino(String titularDestino) { this.titularDestino = titularDestino; }
+
+    @Override
+    public String toString() {
+        return codigoTransaccion + " [" + tipo + "] $" + String.format("%.2f", monto) +
+               " (Origen: " + numeroCuentaOrigen + (numeroCuentaDestino != null ? " -> Destino: " + numeroCuentaDestino : "") + ")";
+    }
 }

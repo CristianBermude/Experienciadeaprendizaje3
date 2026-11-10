@@ -67,4 +67,10 @@ public final class Validador {
             throw new DatoInvalidoException("El saldo inicial no puede ser negativo ni inválido. Valor ingresado: $" + String.format("%.2f", saldo));
         }
     }
+
+    public static void validarMontoTransaccion(double monto) throws DatoInvalidoException {
+        if (Double.isNaN(monto) || monto <= 0.0) {
+            throw new DatoInvalidoException("El monto de la transacción debe ser estrictamente mayor a $0.00. Valor ingresado: $" + String.format("%.2f", monto));
+        }
+    }
 }
