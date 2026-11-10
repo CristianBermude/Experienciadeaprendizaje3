@@ -2,6 +2,10 @@
 *.class
 bin/
 
+# Bitácoras y logs de ejecución
+logs/
+*.log
+
 # Documentos internos (no se publican en el repositorio)
 docs/
 PLAN_DE_PRUEBAS.md
