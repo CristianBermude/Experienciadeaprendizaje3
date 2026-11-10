@@ -11,7 +11,7 @@ El **Banco Académico UDB** es una solución integral diseñada para la administ
 El proyecto de cátedra se compone de tres fases evolutivas:
 - **Fase 1 (Completada)**: Sistema Desktop Base (Gestión de Clientes CRUD, Creación y Administración de Cuentas Bancarias con Swing, POO, MySQL y JDBC).
 - **Fase 2 (Completada)**: Sistema Desktop Completo con Transacciones bancarias simuladas (depósitos, retiros con saldo suficiente, transferencias atómicas ACID), Reportes consolidados y bitácora de auditoría mediante **Log4J 2**.
-- **Fase 3 (Preparada)**: Migración a Plataforma Web utilizando HTML, Servlets, JSP, JavaBeans y Apache Tomcat con control de roles (Administrador, Cajero, Cliente).
+- **Fase 3 (Pendiente)**: Migración a Plataforma Web utilizando HTML, Servlets, JSP, JavaBeans y Apache Tomcat con control de roles (Administrador, Cajero, Cliente). Aún no hay código web; la capa `servicio/`, `datos/` y `modelo/` no depende de Swing y está pensada para reutilizarse.
 
 ---
 
@@ -83,4 +83,4 @@ Experienciadeaprendizaje3/
 | **Gestión de Reportes** | Cuentas Activas, Cuentas Bloqueadas, Clientes Registrados con saldo, Historial General, Totales Acumulados. |
 | **Auditoría con Log4J 2** | `src/log4j2.xml`, registro automático de eventos INFO y errores WARN/ERROR en consola y archivo `logs/banco.log`. |
 | **Script SQL y Base de Datos** | `sql/01_esquema_banco.sql` con soporte para Docker (`3308`) y XAMPP (`3306`). |
-| **Pruebas de Integración** | Suite automatizada `TestIntegracionFase2.java` con 21 aserciones aprobadas al 100%. |
+| **Pruebas de Integración** | Suite automatizada `TestIntegracionFase2.java` con 23 casos (incluye concurrencia de transferencias cruzadas); todos aprobados en la última ejecución. |
