@@ -63,6 +63,9 @@ public class TestIntegracionFase2 {
             // Módulo 4: Transferencias Atómicas ACID y Rollback
             testTransferencias(servicio);
 
+            // Módulo 4-B: Concurrencia (transferencias cruzadas simultáneas sin deadlock)
+            testConcurrenciaTransferenciasCruzadas(servicio);
+
             // Módulo 5: Reportes y Totales Contables
             testReportesYTotales(servicio);
 
@@ -88,7 +91,7 @@ public class TestIntegracionFase2 {
         System.out.println("================================================================================");
 
         if (pruebasFallidas == 0 && totalPruebas > 0) {
-            System.out.println("  VEREDICTO FINAL: >>> 100% EXCELENTE - TODAS LAS ASIGNACIONES PASARON <<<");
+            System.out.println("  VEREDICTO FINAL: >>> TODAS LAS PRUEBAS PASARON <<<");
             System.out.println("================================================================================\n");
             System.exit(0);
         } else {
@@ -282,6 +285,12 @@ public class TestIntegracionFase2 {
     private static void testTransferencias(BancoServicio servicio) throws Exception {
         System.out.println("\n--- [MODULO 04: TRANSFERENCIAS ATÓMICAS ACID Y ROLLBACK] ---");
 
+        // Preparación: la suite debe poder repetirse sin resetear la BD. Cada corrida transfiere $100
+        // desde la cuenta 3, así que se repone el saldo cuando baja de $500 para no depender del estado previo.
+        if (servicio.buscarCuentaPorId(3).getSaldo() < 500.0) {
+            servicio.realizarDeposito(3, 1000.0, "Recarga de preparación de la suite de pruebas");
+        }
+
         // Usamos Cuenta 3 (CTA-2026-00003) y Cuenta 4 (CTA-2026-00004)
         Cuenta ctaOrigen = servicio.buscarCuentaPorId(3);
         Cuenta ctaDestino = servicio.buscarCuentaPorId(4);
@@ -404,6 +413,64 @@ public class TestIntegracionFase2 {
         }
 
         afirmar("CP-TX-11: Rechazo de transferencia con origen y destino idénticos", lanzoMismaCuenta);
+    }
+
+    // =========================================================================
+    // MÓDULO 4-B: CONCURRENCIA - TRANSFERENCIAS CRUZADAS SIN DEADLOCK
+    // =========================================================================
+
+    private static void testConcurrenciaTransferenciasCruzadas(BancoServicio servicio) throws Exception {
+        System.out.println("\n--- [MODULO 04-B: CONCURRENCIA - TRANSFERENCIAS CRUZADAS] ---");
+
+        final int idA = 1;
+        final int idB = 2;
+        final int iteraciones = 15;
+        final double monto = 1.00;
+
+        double sumaAntes = servicio.buscarCuentaPorId(idA).getSaldo() + servicio.buscarCuentaPorId(idB).getSaldo();
+
+        java.util.concurrent.CountDownLatch salida = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ConcurrentLinkedQueue<String> errores = new java.util.concurrent.ConcurrentLinkedQueue<>();
+        java.util.concurrent.atomic.AtomicInteger exitosas = new java.util.concurrent.atomic.AtomicInteger();
+
+        // Hilo 1 transfiere A→B y hilo 2 transfiere B→A, arrancando a la vez: sin un orden de
+        // bloqueo fijo en TransaccionDAO esto provoca "Deadlock found when trying to get lock".
+        Thread t1 = new Thread(() -> ejecutarTransferencias(servicio, salida, idA, idB, iteraciones, monto, errores, exitosas));
+        Thread t2 = new Thread(() -> ejecutarTransferencias(servicio, salida, idB, idA, iteraciones, monto, errores, exitosas));
+        t1.start();
+        t2.start();
+        salida.countDown();
+        t1.join(60000);
+        t2.join(60000);
+
+        double sumaDespues = servicio.buscarCuentaPorId(idA).getSaldo() + servicio.buscarCuentaPorId(idB).getSaldo();
+
+        afirmar("CP-TX-13: Transferencias cruzadas simultáneas (A→B y B→A) sin deadlock ni errores",
+                errores.isEmpty() && exitosas.get() == iteraciones * 2,
+                String.format("Exitosas: %d de %d. Errores: %s", exitosas.get(), iteraciones * 2,
+                        errores.isEmpty() ? "ninguno" : errores.peek()));
+        afirmar("CP-TX-14: La suma de saldos de ambas cuentas permanece constante tras la concurrencia",
+                Math.abs(sumaAntes - sumaDespues) < EPSILON,
+                String.format("Antes: %.2f | Después: %.2f", sumaAntes, sumaDespues));
+    }
+
+    private static void ejecutarTransferencias(BancoServicio servicio, java.util.concurrent.CountDownLatch salida,
+            int origen, int destino, int iteraciones, double monto,
+            java.util.concurrent.ConcurrentLinkedQueue<String> errores,
+            java.util.concurrent.atomic.AtomicInteger exitosas) {
+        try {
+            salida.await();
+            for (int i = 0; i < iteraciones; i++) {
+                try {
+                    servicio.realizarTransferencia(origen, destino, monto, "Prueba concurrencia " + origen + "->" + destino);
+                    exitosas.incrementAndGet();
+                } catch (BancoException e) {
+                    errores.add(e.getMessage());
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     // =========================================================================
