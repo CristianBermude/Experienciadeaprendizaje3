@@ -84,4 +84,3 @@ Experienciadeaprendizaje3/
 | **Auditoría con Log4J 2** | `src/log4j2.xml`, registro automático de eventos INFO y errores WARN/ERROR en consola y archivo `logs/banco.log`. |
 | **Script SQL y Base de Datos** | `sql/01_esquema_banco.sql` con soporte para Docker (`3308`) y XAMPP (`3306`). |
 | **Pruebas de Integración** | Suite automatizada `TestIntegracionFase2.java` con 21 aserciones aprobadas al 100%. |
-| **Documentación de Cátedra** | Documento Técnico, Plan de Pruebas y Auditoría gestionados para entrega de aula virtual. |
