@@ -10,6 +10,7 @@ logs/
 docs/
 PLAN_DE_PRUEBAS.md
 GUION_VIDEO.md
+src/banco/util/GeneradorCapturas.java
 
 # Sistema Operativo
 .DS_Store
